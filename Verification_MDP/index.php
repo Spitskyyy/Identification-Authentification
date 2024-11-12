@@ -1,55 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Connexion</title>
+</head>
+<body>
+    <h2>Se connecter</h2>
+    <form action="index.php" method="POST">
+        <label for="email">Email :</label>
+        <input type="email" name="email" required><br>
+
+        <label for="password">Mot de passe :</label>
+        <input type="password" name="password" required><br>
+
+        <button type="submit">Se connecter</button>
+    </form>
+    <a href="/register.php">Création compte</a>
+</body>
+</html>
 <?php
-// Connexion à la base de données
-$connection = mysqli_connect("localhost", "root", "root", "web-identif");
+session_start();
 
-// Vérification de la connexion
-if (!$connection) {
-    die("Erreur de connexion : " . mysqli_connect_error());
-}
+// Configuration de la base de données
+$pdo = new PDO('mysql:host=localhost;dbname=web-identif', 'root', 'root');
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $_POST['username'];
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = $_POST['email'];
     $password = $_POST['password'];
 
-    // Hachage sécurisé du mot de passe
-    $password_hash = password_hash($password, PASSWORD_BCRYPT);
+    // Récupère l'utilisateur par email
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Insertion dans la base de données
-    $stmt = $connection->prepare("INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $username, $email, $password_hash);
-
-    if ($stmt->execute()) {
-        echo "Inscription réussie !";
+    // Vérifie que l'utilisateur existe et que le mot de passe est correct
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['username'] = $user['username'];
+        echo "Connexion réussie ! Bienvenue, " . $user['username'];
+        // Rediriger vers une page d'accueil ou tableau de bord
+        // header("Location: dashboard.php");
+        exit;
     } else {
-        echo "Erreur lors de l'inscription : " . $connection->error;
+        echo "Email ou mot de passe incorrect.";
     }
-
-    $stmt->close();
-    $connection->close();
 }
 ?>
-
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Identification Utilisateur</title>
-</head>
-<body>
-    <h1>Formulaire d'Identification</h1>
-    <form action="" method="post">
-        <label for="username">Nom d'utilisateur :</label>
-        <input type="text" id="username" name="username" required><br><br>
-
-        <label for="email">Adresse e-mail :</label>
-        <input type="email" id="email" name="email" required><br><br>
-
-        <label for="password">Mot de passe :</label>
-        <input type="password" id="password" name="password" required><br><br>
-
-        <input type="submit" value="Soumettre">
-    </form>
-</body>
-</html>
